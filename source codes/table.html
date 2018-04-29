@@ -1,0 +1,100 @@
+<head>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+<!-- jQuery library -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<!-- Latest compiled JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script>
+$(function() {
+$('.dateType').datepicker({
+dateFormat: 'dd/mm/yy'
+});
+});
+
+</script>
+
+<style>
+[contentEditable=true]:empty:not(:focus):before {
+content: attr(data-text);
+color: gray
+}
+
+input[type=date]::-webkit-inner-spin-button,
+input[type=date]::-webkit-outer-spin-button {
+-webkit-appearance: none;
+}
+
+select::-ms-expand {
+display: none;
+}
+
+select {
+-webkit-appearance: none;
+-moz-appearance: none;
+appearance: none;
+padding: 2px 30px 2px 2px;
+border: none;
+}
+
+</style>
+
+
+</head>
+<div class="table-responsive">
+<table class="table table-bordered" style="max-width: 100%" id="addressTable">
+<thead>
+<tr>
+<th>&nbsp;</th>
+<th>&nbsp;</th>
+<th>&nbsp;</th>
+<th>Primary</th>
+<th>Type</th>
+<th>From</th>
+<th>To</th>
+<th>Address</th>
+<th>District</th>
+<th>Area</th>
+<th>Country</th>
+</tr>
+</thead>
+<tbody id="addressTBody">
+<div id="addrForm">
+<tr>
+  <td>
+    <center><a onclick="insertAddressLine()" href="#"><span class="glyphicon glyphicon-plus" style="color:#337ab7;"/></a></center>
+  </td>
+  <td>
+    <center><a onclick="updateAddressLine()" class="forDisabling" href="#"><span class="glyphicon glyphicon-edit" style="color:#337ab7;"/></a></center>
+  </td>
+  <td>
+    <center><a onclick="removeLine()" class="forDisabling" href="#"><span class="glyphicon glyphicon-remove" style="color:#337ab7;"/></a></td>
+  <td>
+    <center><input type="checkbox" value="" name="addrPrimary[0]" id="empAddPrimaryChkbx" style="background-color:white; border: none" disabled/></center>
+  </td>
+  <td><select id="addrType" style="background-color: white; border:none; width: 100%; height: 100%;" disabled required>
+	<option value="">&nbsp;</option><option value="">Correspondence (HK_C)</option>
+	<option value="">Residential (HK_R)</option>
+	</select></td>
+  <td><input type="text" class="empAddDate dateType" style="background-color: white; border:none; width: 100%; height: 100%;" id="addrFrom" disabled/></td>
+  <td><input type="text" class="empAddDate dateType" style="background-color: white; border:none; width: 100%; height: 100%;" id="addrTo" disabled/></td>
+  <td><input class="empAdd" style="background-color: white; border:none; width: 100%; height: 100%;"  id="addrAddress" onkeypress="return (this.innerText.length < 240)" disabled></input>
+  </td>
+  <td><input class="empAdd" style="background-color: white; border:none; width: 100%; height: 100%;" id="addrDistrict" onkeypress="return (this.innerText.length < 30)" disabled></input>
+  </td>
+  <td><input class="empAdd" style="background-color: white; border:none; width: 100%; height: 100%;" id="addrArea" disabled></input>
+  </td>
+  <td><input class="empAdd" style="background-color: white; border:none; width: 100%; height: 100%;" disabled></input>
+  </td>
+</tr>
+
+</div>
+</tbody>
+</table>
+</div>
+
