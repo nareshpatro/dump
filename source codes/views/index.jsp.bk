@@ -1,0 +1,843 @@
+<%-- 
+    Document   : index
+    Created on : Jun 14, 2017, 10:38:19 AM
+    Author     : Carmen
+    Last update: Jun 21, 2017, 12:26 PM
+--%>
+
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://www.springframework.org/tags" prefix="spring"%>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form"%>
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Dashboard#~*KIDSON</title>
+
+        <script src="<spring:url value="/resources/js/jquery.js?v=${initParam.buildTimeStamp}" />"></script>
+        <script src="<spring:url value="/resources/js/chart.js?v=${initParam.buildTimeStamp}" />"></script>
+        <script src="<spring:url value="/resources/js/ha/pages/messageUI.js?v=${initParam.buildTimeStamp}" />"></script>
+        <script src="<spring:url value="/resources/js/ha/pages/commonFunctions.js?v=${initParam.buildTimeStamp}" />"></script>
+        <script src="<spring:url value="/resources/js/ha/pages/index.js?v=${initParam.buildTimeStamp}" />"></script>
+        <link rel="stylesheet" href="<spring:url value="/resources/css/bootstrap.css?v=${initParam.buildTimeStamp}" />">
+        <link rel="stylesheet" href="<spring:url value="/resources/css/custom.css?v=${initParam.buildTimeStamp}" />">
+        <link rel="stylesheet" href="<spring:url value="/resources/css/bootstrapTable.css?v=${initParam.buildTimeStamp}" />">
+        
+        <script>
+            
+            var savedModulesArray = [];
+            var modulesArray = [];
+            var userId = '${sessionScope.ebsUserId}';
+            var respId = '${sessionScope.ebsRespId}';
+            var appRespId = '${sessionScope.ebsRespAppId}';
+            
+            var CMDateDefault = '${sessionScope.ebsCMDateRange}';
+            var PMDateDefault = '${sessionScope.ebsPMDateRange}';
+
+			var corpDateRangeMax = '${sessionScope.ebsCorpDateRangeLimit}';
+            var corpPMDateDefault = '${sessionScope.ebsCorpPMDateRange}';
+            var corpCMDateDefault = '${sessionScope.ebsCorpCMDateRange}';	
+            
+			var summaryOff = '${sessionScope.ebsSummaryDefaultOff}';
+            
+            $(document).ready(function(){            	
+            	$('#wrWo').val(userId);
+            	$('#wrWoSaved').val(userId);
+            	$('#hiddenWrWo').val(userId);
+            	
+            	if(summaryOff == "Y"){
+                	$('#summaryTab').hide();
+                	$('#detailsTab a').trigger('click');
+                }
+            
+                loadSettings(userId, respId, appRespId);
+
+                //Save settings click function put here to pass session attributes
+                $("#saveSettingsBTN").click(function(){     
+                	if(cmChart1 && cmChart2 && pmChart1 && pmChart2 && woTrend){
+                		cmChart1.destroy();
+                    	cmChart2.destroy();
+                    	pmChart1.destroy();
+                    	pmChart2.destroy();
+                    	woTrend.destroy();
+                	}
+                    saveSettings(userId, respId, appRespId);
+                });
+            });
+            
+            function callWOTrend(search){
+            	<% if("IT Asset".equals(session.getAttribute("respType"))){  %>
+	            	//Work Order Trend CM Call
+	                $.ajax({
+	                    type: 'POST',   
+	                    contentType: 'application/json',
+	                    data : JSON.stringify(search), 
+	                    url : './processDashBoard?module=8',                      
+	                    dataType:'json',
+	                    success : function(data) {
+	                    	drawWoTrend(data);
+	                    },
+	                    error : function(xhr, ajaxOptions, thrownError) {
+	                    	if (xhr.statusText =='abort' || thrownError == "") {
+	                            return;
+	                        }
+	                    }
+	                });
+	            		
+	        	<% } else { %>
+	            	var cmData;
+	        		var pmData;
+	        		var count = 0;
+	        	
+	            	$.ajax({
+	                    type: 'POST',   
+	                    contentType: 'application/json',
+	                    data : JSON.stringify(search), 
+	                    url : './processDashBoard?module=8',                      
+	                    dataType:'json',
+	                    success : function(data) {
+	                    	count ++;
+	                    	cmData = data;
+	                    	
+	                    	if(count == 2){
+	                    		drawWoTrend(cmData, pmData);
+	                    	}
+	                    },
+	                    error : function(xhr, ajaxOptions, thrownError) {
+	                    	if (xhr.statusText =='abort' || thrownError == "") {
+	                            return;
+	                        }
+	                    }
+	                });
+	        	
+	            	$.ajax({
+	                    type: 'POST',   
+	                    contentType: 'application/json',
+	                    data : JSON.stringify(search), 
+	                    url : './processDashBoard?module=9',                      
+	                    dataType:'json',
+	                    success : function(data) {
+	                    	count ++;
+	                    	pmData = data;
+	                    	
+	                    	if(count == 2){
+	                    		drawWoTrend(cmData, pmData);
+	                    	}
+	                    },
+	                    error : function(xhr, ajaxOptions, thrownError) {
+	                    	if (xhr.statusText =='abort' || thrownError == "") {
+	                            return;
+	                        }
+	                    }
+	                });
+	        	<% } %>
+            }
+        </script>
+
+    </head>
+    <body>
+        <jsp:include page="sidebarHeader.jsp" />    
+        
+        <div style="margin-right: 30px">
+            <button id='viewSettingsBTN' type="button" class="btn btn-default btn-sm pull-right" data-toggle="modal" data-target="#viewSettings" style="margin-top: 10px"><span class="glyphicon glyphicon-wrench"></span> Edit Preferences</button>
+        </div>
+        
+        <div id="content">
+            <div class="container-fluid">	            
+	            <div class="alert alert-success alert-dismissable" style="display: none" id="userPreferenceAlert">
+                    <a href="#" class="close" data-hide="alert" aria-label="close" id="closeAlert">&times;</a>
+                    <strong><span class="glyphicon glyphicon-ok-sign"></span> Success!</strong> <spring:message code="HA_INFO_INDEX_USERPREFSAVED" />
+                </div>
+            
+            	<div>
+            		<ul class="nav nav-tabs">
+            			<li class="active" id="summaryTab"><a href="#summaryContent" data-toggle="tab">Summary</a></li>
+            			<li id="detailsTab"><a href="#detailsContent" data-toggle="tab">Details</a></li>
+            		</ul>
+            		
+            		<div class="tab-content">
+            			<div class="tab-pane active" id="summaryContent">
+            				<div class="row">
+            					<% if(!"IT Asset".equals(session.getAttribute("respType"))){  %>
+									<div class="col-md-4">
+										<div class="box box-default">
+											<div id="wrStatLoading" style="text-align:center; padding: 10px;">
+					                        	<img src="<spring:url value="/resources/images/loading.gif" /> " style="max-width:100px">
+					                        </div>
+										
+											<div id="wrStatWrapper" style="display: none; height: 80px; padding-top: 15px;">
+												<div style="float: left">
+													<h1><b id="wrStat" class="dashboardStats">0</b></h1>
+												</div>
+												<div align="right" style="float: right">
+													<h5>Awaiting Work Order</h5>
+													<h4><b>Work Requests</b></h4>
+												</div>
+											</div>
+										</div>
+									</div>
+								<% } %>
+								<div class="col-md-4">
+									<div class="box box-default">
+										<div id="cmWoStatLoading" style="text-align:center; padding: 10px;">
+				                        	<img src="<spring:url value="/resources/images/loading.gif" /> " style="max-width:100px">
+				                        </div>
+									
+										<div id="cmWoStatWrapper" style="display: none; height: 80px; padding-top: 15px;">
+											<div style="float: left">
+												<h1><b id="cmWoStat" class="dashboardStats">0</b></h1>
+											</div>
+											<div align="right"  style="float: right">
+												<h5>Outstanding CM</h5>
+												<h4><b>Work Orders</b></h4>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+							
+							<div class="row">
+								<div><h4 class="text-primary" style="margin-left: 15px" id="cmHeading">Outstanding Corrective Maintenance</h4></div>
+							
+								<div class="col-md-12">
+									<div class="box box-default">
+										<div class="box-body">
+											<div class="row">
+												<div class="col-md-6">
+													<h5 style="color: dimgray"><b>Released/On-Hold Work Orders</b></h5>
+													<div id="cmChart1Loading" style="text-align:center; padding: 10px;">
+							                        	<img src="<spring:url value="/resources/images/loading.gif" /> " style="max-width:100px">
+							                        </div>
+													<div class="col-md-10">
+														<div class="chart-responsive">
+															<canvas id="cmChart1" style="display: none"></canvas>
+														</div>
+													</div>
+												</div>
+												
+												<div class="col-md-6">
+													<h5 style="color: dimgray"><b>Unreleased Work Orders</b></h5>
+													<div id="cmChart2Loading" style="text-align:center; padding: 10px;">
+							                        	<img src="<spring:url value="/resources/images/loading.gif" /> " style="max-width:100px">
+							                        </div>
+													<div class="col-md-10">
+														<div class="chart-responsive">
+															<canvas id="cmChart2" style="display: none"></canvas>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+							
+							<% if(!"IT Asset".equals(session.getAttribute("respType"))) { %>
+								<div class="row">
+									<div><h4 class="text-primary" style="margin-left: 15px" id="cmHeading">Outstanding Preventive Maintenance</h4></div>
+								
+									<div class="col-md-12">
+										<div class="box box-default">
+											<div class="box-body">
+												<div class="row">
+													<div class="col-md-6">
+														<h5 style="color: dimgray"><b>Released/On-Hold Work Orders</b></h5>
+														<div id="pmChart1Loading" style="text-align:center; padding: 10px;">
+								                        	<img src="<spring:url value="/resources/images/loading.gif" /> " style="max-width:100px">
+								                        </div>
+														<div class="col-md-10">
+															<div class="chart-responsive">
+																<canvas id="pmChart1" style="display: none"></canvas>
+															</div>
+														</div>
+													</div>
+													
+													<div class="col-md-6">
+														<h5 style="color: dimgray"><b>Unreleased Work Orders</b></h5>
+														<div id="pmChart2Loading" style="text-align:center; padding: 10px;">
+								                        	<img src="<spring:url value="/resources/images/loading.gif" /> " style="max-width:100px">
+								                        </div>
+														<div class="col-md-10">
+															<div class="chart-responsive">
+																<canvas id="pmChart2" style="display: none"></canvas>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							<% } %>
+							
+							<div class="row">
+								<div class="col-md-12">
+									<div class="box box-default">
+										<div class="box-body">
+											<div class="row">
+												<div class="col-md-12">
+													<h5 style="color: dimgray"><b>Work Order Trend</b></h5>
+													<div id="woTrendLoading" style="text-align:center; padding: 10px;">
+							                        	<img src="<spring:url value="/resources/images/loading.gif" /> " style="max-width:100px">
+							                        </div>
+													<div class="chart-responsive" style="height: 250px;">
+														<canvas id="woTrend" style="display: none"></canvas>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+            			</div>
+            			
+            			<!-- Start of second tab -->
+            			<div class="tab-pane" id="detailsContent">
+            				<form:form id="dashBoardSearchForm" action="processDashBoard" method="POST" modelAttribute="dashBoard">                    				            
+			                <div class="alert" style="display: none" id="dashboardAlert"></div>
+				  
+				            
+				            <!-- Search criteria panel -->
+										 
+				                <div class="panel panel-primary">
+				                    <div class="panel-heading">
+				                        <h4 class="panel-title">
+				                            <a id="filterTitle" data-toggle="collapse" class="accordion-toggle collapsed" data-parent="#accordion" href="#dashboardFilters">Search Criteria</a>
+				                        </h4>
+				                    </div>
+				
+				                    <div id="dashboardFilters" class="panel-collapse collapse">
+				                        <div class="panel-body" style="padding: 8px 0px;">
+				                            <div class="container-fluid">
+				                                <div class="form-group col-md-3">
+				                                    <label  class="control-label" for="eamOrg">EAM Org</label>
+				                                    <form:select path="eamOrg" class="form-control selectpicker" data-live-search="true" id="eamOrg">
+														<form:option value="" label="-- Select --" />
+				                                        <form:options items="${eamOrgList}" itemValue="name" itemLabel="desc"/>
+				                                    </form:select>
+				                                </div>
+				                                <div class="form-group col-md-3">
+				                                        <label class="control-label" for="owningDept">Owning Department</label>
+				                                    <div class="input-group">
+				                                        <input type="text" class="form-control checkValidity" id="owningDept" name="owningDept">
+				                                        <span class="input-group-btn">
+				                                            <button type="button" class="btn btn-primary lovFieldSearchBtn" name="owningDept" id="owningDept"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
+				                                        </span>
+				                                    </div>
+				                                </div>
+				                                <div class="form-group col-md-3">
+				                                        <label class="control-label" for="cmAssetLocation">Location Code</label>
+				                                    <div class="input-group">
+				                                        <input type="text" class="form-control checkValidity" id="assetLocation" name="assetLocation">
+				                                        <span class="input-group-btn">
+				                                            <button type="button" class="btn btn-primary lovFieldSearchBtn" name="assetLocation" id="assetLocation"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
+				                                        </span>
+				                                    </div>
+				                                </div>
+				                                <div class="form-group col-md-3">
+				                                    <label class="control-label" for="maintenanceVendor">Maintenance Body</label>
+				                                    <div class="input-group">
+				                                        <input type="text" class="form-control" id="maintenanceVendor">
+				                                        <span class="input-group-btn">
+				                                            <button type="button" class="btn btn-primary lovFieldSearchBtn" name="maintenanceVendor" id="maintenanceVendor"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
+				                                        </span>
+				                                        <input type="hidden" class="form-control" id="hiddenMBody" name="maintenanceVendor">
+				                                    </div>
+				                                </div>
+				                                
+				                                <div class="form-group col-md-3">
+				                                    <label  class="control-label" for="creationFrom">CM Creation Date From</label>
+				                                        <div class='input-group date dateFrom dateFromLimited'>
+				                                            <input type='text' class="form-control col-md-8" name="creationFrom" id="creationFrom"/>
+				                                            <span class="input-group-addon">
+				                                                <span class="glyphicon glyphicon-calendar"></span>
+				                                            </span>
+				                                        </div>
+				                                    <small class="form-text text-muted CMDateHint"></small>
+				                                </div>
+				                                <div class="form-group col-md-3">
+				                                    <label  class="control-label" for="creationTo">CM Creation Date To</label>
+				                                        <div class='input-group date dateTo dateToLimited'>
+				                                            <input type='text' class="form-control col-md-8" name="creationTo" id="creationTo" data-date-end-date="0d"/>
+				                                            <span class="input-group-addon">
+				                                                <span class="glyphicon glyphicon-calendar"></span>
+				                                            </span>
+				                                        </div>
+				                                    <small class="form-text text-muted CMDateHint"></small>
+				                                </div>
+				                                
+				                                <% if(!"IT Asset".equals(session.getAttribute("respType"))) { %>
+					                                <div class="form-group col-md-3">
+					                                    <label  class="control-label" for="assetRisk">Risk Level</label>
+					                                    <form:select path="riskLevel" class="form-control selectpicker" data-live-search="true" id="assetRisk">
+															<form:option value="" label="-- Select --" />
+					                                        <form:options items="${riskLevelList}" itemValue="name" itemLabel="desc"/>
+					                                    </form:select>
+					                                </div>
+				                                
+					                                <div class="form-group col-md-3 checkbox" style="margin-top:25px; margin-bottom: 30px">
+					                                    <label style="font-weight: bold"><input type="checkbox" id="criticalMedEquip">Critical Medical Equipment Only</label>
+					                                </div>     
+				                                <% } %>
+				                                    
+				                                <div class="form-group col-md-3">
+				                                    <label  class="control-label" for="scheduleFrom">PM Scheduled Date From</label>
+				                                    <div class='input-group date dateFromExtra'>
+				                                        <input type='text' class="form-control col-md-8" name="scheduleFrom" id="scheduleFrom"/>
+				                                        <span class="input-group-addon">
+				                                            <span class="glyphicon glyphicon-calendar"></span>
+				                                        </span>
+				                                    </div>
+				                                    <small class="form-text text-muted PMDateHint"></small>
+				                                </div>
+				                                <div class="form-group col-md-3">
+				                                    <label  class="control-label" for="scheduleTo">PM Scheduled Date To</label>
+				                                    <div class='input-group date dateToExtra'>
+				                                        <input type='text' class="form-control col-md-8" name="scheduleTo" id="scheduleTo"/>
+				                                        <span class="input-group-addon">
+				                                            <span class="glyphicon glyphicon-calendar"></span>
+				                                        </span>
+				                                    </div>
+				                                    <small class="form-text text-muted PMDateHint"></small>
+				                                </div>
+				                                
+				                                <div class="form-group col-md-3 checkbox" style="margin-top:25px; margin-bottom: 30px">
+				               						<% if(!"IT Asset".equals(session.getAttribute("respType")) && "Y".equals(session.getAttribute("respRequestCreate")) && "Y".equals(session.getAttribute("respRequestView"))) { %>
+				                                	    <label style="font-weight: bold"><input type="checkbox" id="wrWo" checked>My Work Requests/Orders Only</label>
+				                                	<%} else {%>
+				                                	 	<label style="font-weight: bold"><input type="checkbox" id="wrWo" checked>My Work Orders Only</label>
+				                                	<% }%>
+				                                </div>
+				                                    
+				                                <div class="form-group col-md-3 pull-right" style="margin-top: 23px">
+				                                    <button id='applyDashboardFilter' type="button" class="btn btn-primary pull-right" data-loading-text="Searching..">Search</button>
+				                                </div>
+				                            </div>
+				                        </div>
+				                    </div>
+				            	</div>
+				            </form:form>
+				            
+				            <div class="panel panel-primary" id="cmTitle">
+				                <div class="panel-body">
+					                <div class="container-fluid" style="padding:0px">
+					                	<div><h4 class="text-primary" style="margin-left: 15px" id="cmHeading">Corrective Maintenance</h4></div>
+						               	<% if(!"IT Asset".equals(session.getAttribute("respType")) && "Y".equals(session.getAttribute("respRequestCreate")) && "Y".equals(session.getAttribute("respRequestView"))) { %>
+							                <div class="container-fluid col-md-4" id='cm1'>
+							                    <div class="panel panel-primary">
+							                        <div class="panel-heading">Work Requests Summary</div>
+							                        <div id="wrSummaryLoading" style="text-align:center; padding: 10px;">
+							                        	<img src="<spring:url value="/resources/images/loading.gif" /> " style="max-height: 30%; max-width: 30%">
+							                        </div>
+							                        <table class="table-condensed-sm table-hover dashboardTables" data-toggle="table" data-show-header="false" id="wrSummary" data-query-params="dashboardParams" style="display: none">
+							                            <thead>
+							                                <tr>
+							                                    <th data-field="wrstatus"></th>
+							                                    <th data-field="wrstatuscount" data-formatter="wrSummaryFormat" data-align="center" data-width="50px"></th>
+							                                    <th data-visible="false" data-field="wrstatuscode"></th>
+							                                </tr>
+							                            </thead>
+							                        </table>
+							                    </div>
+							                </div>
+						                <% }%>
+						
+						                <div class="container-fluid col-md-4" id='cm2'>
+						                    <div class="panel panel-primary">
+						                        <div class="panel-heading">Work Order Status Summary</div>
+						                        <div id="woSummaryLoading" style="text-align:center; padding: 10px;">
+						                        	<img src="<spring:url value="/resources/images/loading.gif" /> " style="max-height: 30%; max-width: 30%">
+						                        </div>
+						                        <table class="table-condensed table-hover dashboardTables" data-toggle="table" data-show-header="false" id="woSummary" data-query-params="dashboardParams" style="display: none">
+						                            <thead>
+						                                <tr>
+						                                    <th data-field="wostatus"></th>
+						                                    <th data-field="wostatuscount" data-formatter="woSummaryFormat" data-align="center" data-width="50px"></th>
+						                                </tr>
+						                            </thead>
+						                        </table>
+						                    </div>
+						                </div>
+					
+						                <div class="container-fluid  col-md-4" id='cm3'>
+						                	<div class="panel panel-primary">
+						                    	<div class="panel-heading">Outstanding Work Orders</div>
+						                    	<div id="outstandingWoLoading" style="text-align:center; padding: 10px;">
+						                        	<img src="<spring:url value="/resources/images/loading.gif" /> " style="max-height: 30%; max-width: 30%">
+						                        </div>
+						                    	<table class="table-condensed table-hover dashboardTables" data-toggle="table" data-show-header="false" id="outstandingWo" data-query-params="dashboardParams"  style="display: none">
+						                            <thead>
+						                                <tr>
+						                                    <th data-field="outstanding"></th>
+						                                    <th data-field="outstandingcount" data-formatter="outstandingFormat" data-align="center" data-width="50px"></th>
+						                                </tr>
+						                            </thead>
+						                    	</table>
+						                	</div>
+						            	</div>
+					                </div>
+			   
+			            			<div class="container-fluid"  style="padding:0px">
+			            				<div><h4 class="text-primary" style="margin-left: 15px" id="pmHeading">Preventive Maintenance</h4></div>
+						            	<div class="container-fluid  col-md-4" id='pm1'>
+							            	<div class="panel panel-primary">
+							                	<div class="panel-heading">Work Order Summary*</div>
+							                	<div id="pmSummaryLoading" style="text-align:center; padding: 10px;">
+							                		<img src="<spring:url value="/resources/images/loading.gif" /> " style="max-height: 30%; max-width: 30%">
+							                	</div>
+							                	<table class="table-condensed table-hover dashboardTables" data-toggle="table" data-show-header="false" id="pmSummary" data-query-params="dashboardParams"  style="display: none">
+							                            <thead>
+							                                <tr>
+							                                    <th data-field="pmSummaryDesc"></th>
+							                                    <th data-formatter="top10" data-align="center" data-width="50px" data-cell-style="top10Style"></th>
+							                                    <th data-field="pmSummaryCount" data-formatter="pmSummaryFormat" data-align="center" data-width="50px"></th>
+							                                </tr>
+							                            </thead>
+								                </table>
+								                <p style="margin: 10px 0px 0px 0px">
+													<b><i>*Unreleased Orders</i></b>
+												</p>
+								            </div>
+							        	</div>
+					
+								        <div class="container-fluid  col-md-4" id='pm2'>
+								            <div class="panel panel-primary">
+								                <div class="panel-heading">Work Order Status Summary</div>
+								                <div id="statusSummaryLoading" style="text-align:center; padding: 10px;">
+								                	<img src="<spring:url value="/resources/images/loading.gif" /> " style="max-height: 30%; max-width: 30%">
+								                </div>
+								                <table class="table-condensed-sm table-hover dashboardTables" data-toggle="table" data-show-header="false" id="statusSummary" data-query-params="dashboardParams"  style="display: none">
+								                    <thead>
+								                        <tr>
+								                            <th data-field="pmWostatus"></th>
+								                            <th data-formatter="top10" data-align="center" data-width="50px" data-cell-style="top10Style"></th>
+								                            <th data-field="pmWostatuscount" data-formatter="pmStatusFormat" data-align="center" data-width="50px"></th>
+								                        </tr>
+								                    </thead>
+								                </table>
+								            </div>
+								        </div>
+					            
+							        	<div class="container-fluid  col-md-4" id='pm3'>
+								            <div class="panel panel-primary">
+								                <div class="panel-heading">Outstanding Work Order*</div>
+								                <div id="upcomingWOLoading" style="text-align:center; padding: 10px;">
+								                	<img src="<spring:url value="/resources/images/loading.gif" /> " style="max-height: 30%; max-width: 30%">
+								                </div>
+								                <table class="table-condensed-sm table-hover dashboardTables" data-toggle="table" data-show-header="false" id="upcomingWO"  style="display: none">
+								                    <thead>
+								                        <tr>
+								                            <th data-field="dateRange"></th>
+								                            <th data-field="upcomingWoCount" data-formatter="upcomingFormat" data-align="center" data-width="50px"></th>
+								                        </tr>
+								                    </thead>
+								                </table>
+								                <p style="margin: 10px 0px 0px 0px">
+													<b><i>*Released/On-Hold Orders</i></b>
+												</p>
+								            </div>
+								        </div>
+			            			</div>					            	
+				        		</div>
+							</div>
+            			</div>
+            			<!-- End of second tab -->
+            		</div>
+            	</div>
+            </div>
+		</div>	
+        
+        <!-- Hidden form for linking back to work request and work order search page from dashboard -->
+        <form:form id="dashboardFiltersForm" action="searchWorkOrder" method="POST" modelAttribute="searchWorkRequest">
+            <!-- Saved values -->
+            <input type="hidden" name="eamOrg" id="hiddenEamOrg">
+            <input type="hidden" name="owningDept" id="hiddenOwningDept">
+            <input type="hidden" name="assetLocation" id="hiddenAssetLocation">
+            <!-- Filter fields -->
+            <input type="hidden" name="wrWo" id="hiddenWrWo">
+            <input type="hidden" name="criticalMedEquip" id="hiddenCriticalMedEquip">
+            <input type="hidden" name="creationFrom" id="hiddenCreationFrom">
+            <input type="hidden" name="creationTo" id="hiddenCreationTo">
+            
+            <!-- PM filter fields -->
+            <input type="hidden" name="mBody" id="hiddenMBodyPost" value="">
+            <input type="hidden" name="maintenanceVendor" id="hiddenMaintenanceVendor" value="">
+            <input type="hidden" name="riskLevel" id="hiddenAssetRisk">
+            <input type="hidden" name="scheduleFrom" id="hiddenScheduleFrom">
+            <input type="hidden" name="scheduleTo" id="hiddenScheduleTo">
+            <!-- Dependant values -->
+            <input type="hidden" name="statusType" id="hiddenStatusType">
+            <!-- CM Dependants -->
+            <input type="hidden" name="wrStatus" id="hiddenWrStatus">
+            <input type="hidden" name="woStatus" id="hiddenWoStatus">
+            <!-- PM Dependants -->
+            <input type="hidden" name="pmSummary" id="hiddenPmSummary">
+            <input type="hidden" name="woStatus" id="hiddenWoStatus">
+            <input type="hidden" name="upcoming" id="hiddenUpcoming">
+        </form:form>
+        
+        <!-- Demo Top 10 Modal -->
+		<div class="modal" id="top10" role="dialog">
+			<div class="modal-dialog  modal-md">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal">&times;</button>
+						<h4 id="top4ModalTitle" class="modal-title">Demo Work Orders</h4>
+					</div>
+					<div class="modal-body">
+						<div class="panel panel-primary">
+							<div class="panel-heading" id="top10Titles"></div>
+							<div class="panel-heading" id="top10SearchCriteria" style="display:none"></div>
+							<table data-query-params="dashboardParams"
+								class="table-condensed table-hover" data-toggle="table"
+								data-show-header="true" id="top10Data" style="display: none">
+								<thead>
+									<tr>
+										<th data-field="maintenanceVendor">Maintenance Body</th>
+										<th data-field="maintenanceVendorNumber" data-visible ="false" >Vendor Number</th>
+										<th data-field="maintenanceVendorCount"
+											data-formatter="top10Link" data-align="center">No. PM</th>
+									</tr>
+								</thead>
+							</table>
+							<div id="top10DataLoading"
+								style="text-align: center; padding: 10px;">
+								<img
+									src="<spring:url value="/resources/images/loading.gif" /> "
+									style="max-height: 30%; max-width: 30%">
+							</div>
+						</div>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-default"
+							data-dismiss="modal">Close</button>
+					</div>
+				</div>
+			</div>
+		</div>
+        
+
+		<!-- View Settings Modal -->
+        <div class="modal" id="viewSettings" role="dialog" data-backdrop="static" data-keyboard="false">
+         	<div class="modal-dialog  modal-lg">
+                <div class="modal-content">
+	                  <div class="modal-header">
+	                    <h4 class="modal-title">Dashboard Settings</h4>
+	                  </div>
+                	<div class="modal-body">
+                        <div class="container-fluid">
+                			<div class="alert" style="display: none" id="preferenceAlert"></div>
+                        
+                            <form:form id="saveDashboardFiltersForm" action="processUserPreference" method="POST" modelAttribute="dashBoard">   
+               					<% if(!"IT Asset".equals(session.getAttribute("respType")) && "Y".equals(session.getAttribute("respRequestCreate")) && "Y".equals(session.getAttribute("respRequestView"))) { %>
+	                                <div class="form-group col-md-12 checkbox">
+	                                    <label style="font-weight: bold"><input type="checkbox" id="wrWoSaved" name="wrWoSaved" checked>My Work Requests/Orders Only</label>
+	                                </div>
+                                <% } else { %>
+                                	<div class="form-group col-md-12 checkbox">
+	                                    <label style="font-weight: bold"><input type="checkbox" id="wrWoSaved" name="wrWoSaved" checked>My Work Orders Only</label>
+	                                </div>
+                                <% } %>
+
+                                <div class="form-group col-md-4">
+                                    <label  class="control-label" for="eamOrgSaved">EAM Org</label>
+                                    <form:select path="eamOrgSaved" class="form-control selectpicker" id="eamOrgSaved" data-live-search="true">
+										<form:option value="" label="-- Select --" />
+                                        <form:options items="${eamOrgList}" itemValue="name" itemLabel="desc"/>
+                                    </form:select>
+                                </div>
+                                <div class="form-group col-md-4">
+                                        <label class="control-label" for="owningDeptSaved">Owning Department</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control checkValidity" id="owningDeptSaved" name="owningDeptSaved">
+                                        <span class="input-group-btn">
+                                            <button type="button" class="btn btn-primary lovFieldSearchBtn" name="owningDeptSaved" id="owningDept"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="form-group col-md-4">
+                                        <label class="control-label" for="assetLocationSaved">Location Code</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control checkValidity" id="assetLocationSaved" name="assetLocationSaved">
+                                        <span class="input-group-btn">
+                                            <button type="button" class="btn btn-primary lovFieldSearchBtn" name="assetLocationSaved" id="assetLocation"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </form:form>
+                                                                      
+                            <div class="col-md-6">
+                            	<h5 class="text-default"><b>Corrective Maintenance</b></h5>
+               					<% if(!"IT Asset".equals(session.getAttribute("respType")) && "Y".equals(session.getAttribute("respRequestCreate")) && "Y".equals(session.getAttribute("respRequestView"))) { %>
+	                                <div class="checkbox">
+	                                  <label>
+	                                  <input id='cm1Switch' class="toggles" checked type="checkbox">
+	                                  Work Requests Summary
+	                                  </label>
+	                                </div>
+                                <% } %>
+                                <div class="checkbox">
+                                  <label>
+                                  <input id='cm2Switch' class="toggles" checked type="checkbox">
+                                  Work Order Status Summary
+                                  </label>
+                                </div>
+                                <div class="checkbox">
+                                  <label>
+                                  <input id='cm3Switch' class="toggles" checked type="checkbox">
+                                  Outstanding Work Orders
+                                  </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                            	<h5 class="text-default"><b>Preventive Maintenance</b></h5>
+                                <div class="checkbox">
+                                  <label>
+                                  <input id='pm1Switch' class="toggles" checked type="checkbox">
+                                  Work Order Summary
+                                  </label>
+                                </div>
+                                <div class="checkbox">
+                                  <label>
+                                  <input id='pm2Switch' class="toggles" checked type="checkbox">
+                                  Work Order Status Summary
+                                  </label>
+                                </div>
+                                <div class="checkbox">
+                                  <label>
+                                  <input id='pm3Switch' class="toggles" checked type="checkbox">
+                                  Outstanding Work Order
+                                  </label>
+                                </div>
+                            </div>          
+                        </div>
+	                  <div class="modal-footer">
+	                  		<button type="button" class="btn btn-primary" id="saveSettingsBTN">Save</button>
+	                    	<button type="button" class="btn btn-default" data-dismiss="modal" id="cancelSettingsBTN">Cancel</button>
+	                  </div>
+                	</div>
+            	</div>
+        	</div>
+        </div>
+
+        <script>
+            <!-- Table formatters -->
+            function wrSummaryFormat(value, row) {
+            	if(value == "0" && row.wrstatus == "Total"){
+            		return '<a class="btn-link" style="text-decoration: none; cursor: default" id="'+ row.wrstatuscode +'"><b>' + value + "</b></a>";
+            	}
+            	else if(value == "0"){
+            		return '<a class="btn-link" style="text-decoration: none; cursor: default" id="'+ row.wrstatuscode +'">' + value + "</a>";
+            	}
+            	else if(row.wrstatus == "Total"){
+                    return '<a class="btn-link" style="cursor: pointer" onclick="clickValueLink(1, this.id, ' + value + ')" id="total"><b>' + value + "</b></a>";
+                }
+                else{
+                    return '<a class="btn-link" style="cursor: pointer" onclick="clickValueLink(1, this.id, ' + value + ')" id="'+ row.wrstatuscode +'">' + value + "</a>";
+                }
+            }
+            
+            function woSummaryFormat(value, row) {
+            	if(value == "0" && row.wostatus == "Total"){
+            		return '<a class="btn-link" style="text-decoration: none; cursor: default" id="'+ row.wostatus +'"><b>' + value + "</b></a>";
+            	}
+            	else if(value == "0"){
+            		return '<a class="btn-link" style="text-decoration: none; cursor: default" id="'+ row.wostatus +'">' + value + "</a>";
+            	}
+            	else if(row.wostatus == "Total"){
+                    return '<a class="btn-link" style="cursor: pointer" onclick="clickValueLink(2, this.id, ' + value + ')" id="'+ row.wostatus +'"><b>' + value + "</b></a>";
+                }
+                else{
+                    return '<a class="btn-link" style="cursor: pointer" onclick="clickValueLink(2, this.id, ' + value + ')" id="'+ row.wostatus +'">' + value + "</a>";
+                }
+            }
+            
+            function outstandingFormat(value, row, index) {
+            	if(value == "0" && row.outstanding == "Total"){
+            		return '<a class="btn-link" style="text-decoration: none; cursor: default" id="'+ index +'"><b>' + value + "</b></a>";
+            	}
+            	else if(value == "0"){
+            		return '<a class="btn-link" style="text-decoration: none; cursor: default" id="'+ index +'">' + value + "</a>";
+            	}
+            	else if(row.outstanding == "Total"){
+                    return '<a class="btn-link" style="cursor: pointer" onclick="clickValueLink(3, this.id, ' + value + ')" id="'+ index +'"><b>' + value + "</b></a>";
+            	}
+            	else{
+                    return '<a class="btn-link" style="cursor: pointer" onclick="clickValueLink(3, this.id, ' + value + ')" id="'+ index +'">' + value + "</a>";
+            	}
+            }
+            
+            function pmSummaryFormat(value, row, index) {
+            	if(value == "0" && row.pmSummaryDesc == "Total"){
+            		return '<a class="btn-link" style="text-decoration: none; cursor: default" id="'+ row.pmSummaryDesc +'"><b>' + value + "</b></a>";
+            	}
+            	else if(value == "0"){
+            		return '<a class="btn-link" style="text-decoration: none; cursor: default" id="'+ row.pmSummaryDesc +'">' + value + "</a>";
+            	}
+            	else if(row.pmSummaryDesc == "Total"){
+            		var string = "PMTotal";
+                    return '<a class="btn-link" style="cursor: pointer" onclick="clickValueLink(4, this.id, ' + value + ')" id="'+ string +'"><b>' + value + "</b></a>";
+                }
+            	else{
+                    return '<a class="btn-link" style="cursor: pointer;" onclick="clickValueLink(4, this.id, ' + value + ')" id="'+ row.pmSummaryDesc +'">' + value + "</a>";
+            	}
+            }
+            
+            function pmStatusFormat(value, row) {
+            	if(value == "0" && row.pmWostatus == "Total"){
+            		return '<a class="btn-link" style="text-decoration: none; cursor: default" id="'+ row.pmWostatus +'"><b>' + value + "</b></a>";
+            	}
+            	else if(value == "0"){
+            		return '<a class="btn-link" style="text-decoration: none; cursor: default" id="'+ row.pmWostatus +'">' + value + "</a>";
+            	}
+            	else if(row.pmWostatus == "Total"){
+                    return '<a class="btn-link" style="cursor: pointer" onclick="clickValueLink(5, this.id, ' + value + ')" id="'+ row.pmWostatus +'"><b>' + value + "</b></a>";
+                }
+                else{
+                    return '<a class="btn-link" style="cursor: pointer" onclick="clickValueLink(5, this.id, ' + value + ')" id="'+ row.pmWostatus +'">' + value + "</a>";
+                }
+            }   
+            
+            function upcomingFormat(value, row, index) {
+            	if(value == "0" && row.dateRange == "Total"){
+            		return '<a class="btn-link" style="text-decoration: none; cursor: default" id="'+ index +'"><b>' + value + "</b></a>";
+            	}
+            	else if(value == "0"){
+            		return '<a class="btn-link" style="text-decoration: none; cursor: default" id="'+ index +'">' + value + "</a>";
+            	}
+            	else if(row.dateRange == "Total"){
+                    return '<a class="btn-link" style="cursor: pointer" onclick="clickValueLink(6, this.id, ' + value + ')" id="'+ index +'"><b>' + value + "</b></a>";
+                }
+                else{
+                    return '<a class="btn-link" style="cursor: pointer" onclick="clickValueLink(6, this.id, ' + value + ')" id="'+ index +'">' + value + "</a>";
+                }
+            }   
+            
+            function top10(value, row) {
+				if (document.getElementById('maintenanceVendor').value === null || document.getElementById('maintenanceVendor').value === "" ) {
+					if (row.pmSummaryDesc != null && row.pmSummaryDesc != ""){
+						return '<button type="button" class="btn btn-link btn-sm" onclick="openTop10(this.id)" id="'+ row.pmSummaryDesc +":"+ row.pmSummaryCount + ":4" +'"><span class="glyphicon glyphicon-info-sign"></span></button>';
+					} else {
+						return '<button type="button" class="btn btn-link btn-sm" onclick="openTop10(this.id)" id="'+ row.pmWostatus +":"+ row.pmWostatuscount + ":5" +'"><span class="glyphicon glyphicon-info-sign"></span></button>';
+					}
+				} else {
+					return '';
+				}
+            }
+
+            function top10Link(value, row, index) {
+            	// Only top 10 value can click, no clicking for other
+            	if(value == "0" || row.maintenanceVendor === "Others"){
+            		return '<a class="btn-link" style="text-decoration: none; cursor: default">' + value + "</a>";
+            	}
+            	else{
+            		return '<a class="btn-link" style="cursor: pointer" onclick="clickTop10ValueLink(\'' + row.maintenanceVendor + '\',\'' + row.maintenanceVendorNumber + '\')" >' + value + '</a>';
+            	}
+            }			
+        </script>
+    </body>
+</html>
