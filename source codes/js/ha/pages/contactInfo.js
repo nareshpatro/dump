@@ -17,42 +17,44 @@ $(document).ready(function(){
 	
 	$('.dateType').datepicker({ dateFormat: 'dd/mm/yy' });
 	
+	//Insert record
+	$('.insertLine').click(function(){
+		var row = $(this).parents('tr');
+		insertAddressLine(row.closest('table').prop('id'), row);
+	});	
+	
 	//Update record
 	$('.updateAddressRec').click(function(){
 		var row = $(this).parents('tr');
-		enableFields('addressTable, row);
-/*		updtRec.parents('tr').find('.addrPrimary').removeAttr("disabled");
-		
-		var currentTD = updtRec.parents('tr').find('.empAdd');
-		$.each(currentTD, function () {
-			$(this).removeAttr("disabled");
-		});
-		
-		updtRec.parents('tr').find('.addrTypeSelect').focus();
-		updtRec.parents('tr').find('.dateType').removeAttr("disabled");
-		updtRec.parents('tr').find('.dateType').attr('placeholder','dd/mm/yyyy');		
-*/
+		enableFields('addressTable', row);
 	});
 	
 	//Delete record
 	$('.deleteRec').click(function(){
-		var delRec = $(this);
+		var row = $(this).parents('tr');
 		$('<div></div>').appendTo('body')
-		.html('<div><h6>'+"Do you really want to delete this record?"+'?</h6></div>')
+		.html('<div><h6>Do you really want to delete this record?</h6></div>')
 		.dialog({
 			modal: true, title: 'Warning', zIndex: 10000, autoOpen: true,
 			width: 'auto', resizable: false,
 			buttons: {
 				Yes: function () {	
-					var tableId = delRec.closest('table').prop('id');
+					var tableId = row.closest('table').prop('id');
 					if($('#' + tableId + ' tr').length > 2){
-						delRec.closest("tr").remove();
+						
+						//insert ajax delete function rec here
+						row.remove();
+						
 					}else{	
-						delRec.closest("tr").find('select').val('');
-						delRec.closest("tr").find('input').val('');	
+					
+						//insert ajax delete function rec here
+						
+						row.find('select').val('');
+						row.find('input').val('');
+						row.find('.addrPrimary').prop('checked', false);				
 						disableIcons(tableId);
 					}
-					disableFields(tableId);
+					disableFields(tableId, row);
 					$(this).dialog("close");
 				},
 				No: function () {                                                    
@@ -67,7 +69,8 @@ $(document).ready(function(){
 	
 	//Validation for Address region
 	$('.toDate').on("change paste keyup", function() {
-		var fromInput = $(this).parents('tr').find('.fromDate');
+		var row = $(this).parents('tr');
+		var fromInput = row.find('.fromDate');
 		if (fromInput.val() !== "" && $(this).val() !== "") {
 			var adrFrom = fromInput.val().split('/');
 			var to = $(this).val().split('/');
@@ -77,15 +80,16 @@ $(document).ready(function(){
 				addErrMsgParams('07301', 'Payroll'); //for INVALID_DATE_TO error
 			}
     	}
-		if($(this).parents('tr').find('.addrTypeSelect').val() == ""){
+		
+		if(row.find('.addrTypeSelect').val() == ""){
 			segment_name.push('Type');
 			addErrMsgParams('01023', 'Application Object Library'); //for MISSING_VALUE error
 		}	
-		if($(this).parents('tr').find('.fromDate').val() == ""){
+		if(row.find('.fromDate').val() == ""){
 			segment_name.push('From');
 			addErrMsgParams('01023', 'Application Object Library'); //for MISSING_VALUE error
 		}
-		if($(this).parents('tr').find('.addressText').val() == ""){
+		if(row.find('.addressText').val() == ""){
 			segment_name.push('Address');
 			addErrMsgParams('01023', 'Application Object Library'); //for MISSING_VALUE error
 		}
@@ -116,15 +120,35 @@ $(document).ready(function(){
  		}
 	});
 	
-	
 	$.ajax({
 		type : "POST",
 		url : "./getAddressTypeList",
-		success: function(addrTypeList){
-			$('.addrTypeSelect').append($('<option/>', { 
-				value: addrTypeList.name,
-				text : addrTypeList.desc 
-			}));
+		success: function(list){
+			for(var i = 0; i < list.length; i++){
+				$('.addrTypeSelect').append('<option value="'+ list[i]["name"] +'">' + list[i]["desc"] +'</option>');
+			}
+		}
+	});
+		
+	
+	$.ajax({
+		type : "POST",
+		url : "./getArea",
+		success: function(list){
+			for(var i = 0; i < list.length; i++){
+				$('.areaSelect').append('<option value="'+ list[i]["name"] +'">' + list[i]["desc"] +'</option>');
+			}
+		}
+	});
+	
+	$.ajax({
+		type : "POST",
+		url : "./getCountry",
+		success: function(list){
+			for(var i = 0; i < list.length; i++){
+				$('.countrySelect').append('<option value="'+ list[i]["name"] +'">' + list[i]["desc"] +'</option>');
+			}
+			
 		}
 	});
 		
@@ -146,12 +170,15 @@ function enableFields(tableId, row){
 	if(tableId == 'addressTable'){
 		var primaryInput = row.find('.addrPrimary');		
 		var typeInput = row.find('.addrTypeSelect');
+//		var typeInputDiv = row.find('.addrTypeSelectDiv');
 		var fromInput = row.find('.fromDate');
 		var toInput = row.find('.toDate');
 		var addressInput = row.find('.addressText');
 		var districtInput = row.find('.districtText');
 		var areaInput = row.find('.areaSelect');
-		var countryInput = row.find('.countrySelect');		
+//		var areaInputDiv = row.find('.areaSelectDiv');
+		var countryInput = row.find('.countrySelect');	
+//		var countryInputDiv = row.find('.countrySelectDiv');	
 		
 		var typeDiv = row.find('.addrTypeDiv');
 		var fromDiv = row.find('.addrFromDiv');
@@ -162,23 +189,23 @@ function enableFields(tableId, row){
 		var countryDiv = row.find('.addrCountryDiv');
 		
 		var typeVal = typeDiv.text();
-		var fromVal = fromInput.text();
-		var toVal = toInput.text();
-		var addressVal = addressInput.text();
-		var districtVal = districtInput.text();
-		var areaVal = areaInput.text();
-		var countryVal = countryInput.text();	
-
+		var fromVal = fromDiv.text();
+		var toVal = toDiv.text();
+		var addressVal = addressDiv.text();
+		var districtVal = districtDiv.text();
+		var areaVal = areaDiv.text();
+		var countryVal = countryDiv.text();	
+	
 		primaryInput.removeAttr("disabled");
 		primaryInput.focus();
-		
-		typeInput.selectpicker('val', [typeVal]);
+				
+		typeInput.filter(function() {return (typeVal)? $(this).text() == typeVal : $(this).text() ==  " ";}).prop('selected', true);
 		fromInput.val(fromVal);
 		toInput.val(toVal);
 		addressInput.val(addressVal);
 		districtInput.val(districtVal);
-		areaInput.selectpicker('val', [areaVal]);
-		countryInput.selectpicker('val', [areaVal]);
+		areaInput.filter(function() {return (areaVal)? $(this).text() == areaVal : $(this).text() ==  " ";}).prop('selected', true);
+		countryInput.filter(function() {return (countryVal)? $(this).text() == countryVal : $(this).text() ==  " ";}).prop('selected', true);
 		
 		typeInput.show();
 		fromInput.show();
@@ -196,18 +223,23 @@ function enableFields(tableId, row){
 		areaDiv.hide();
 		countryDiv.hide();		
 		
+		row.find('.dateType').attr('placeholder','dd/mm/yyyy');
 	}
 }
 
 function disableFields(tableId, row) {
 	if(tableId == 'addressTable'){
+		var primaryInput = row.find('.addrPrimary');	
 		var typeInput = row.find('.addrTypeSelect');
+	//	var typeInputDiv = row.find('.addrTypeSelectDiv');
 		var fromInput = row.find('.fromDate');
 		var toInput = row.find('.toDate');
 		var addressInput = row.find('.addressText');
 		var districtInput = row.find('.districtText');
 		var areaInput = row.find('.areaSelect');
-		var countryInput = row.find('.countrySelect');		
+	//	var areaInputDiv = row.find('.areaSelectDiv');
+		var countryInput = row.find('.countrySelect');	
+	//	var countryInputDiv = row.find('.countrySelectDiv');	
 		
 		var typeDiv = row.find('.addrTypeDiv');
 		var fromDiv = row.find('.addrFromDiv');
@@ -224,7 +256,8 @@ function disableFields(tableId, row) {
 		var districtVal = districtInput.val();
 		var areaVal = areaInput.children("option").filter(":selected").text();
 		var countryVal = countryInput.children("option").filter(":selected").text();
-				
+		
+		primaryInput.prop('disabled', true);
 		typeDiv.text(typeVal);
 		fromDiv.text(fromVal);
 		toDiv.text(toVal);
@@ -248,6 +281,7 @@ function disableFields(tableId, row) {
 		districtDiv.show();
 		areaDiv.show();
 		countryDiv.show();
+		
 	}
 }
 
@@ -273,11 +307,14 @@ function updateAddressLine() {
 
 
 //inserting a row line or enabling a row for update if no records
-function insertAddressLine() {
+function insertAddressLine(tableId, row) {
 	
 	//if with records already
 	if($('#addressTable tr').length > 2 || isNotNullAddress()){
-		var tbody = document.getElementById("addressTBody");
+		var newRow = row.cloneNode(true);
+		document.getElementById(tableId).appendChild(newRow);
+		
+	/*	var tbody = document.getElementById("addressTBody");
 		var row = tbody.insertRow(0);
 		var cellInsert = row.insertCell(0);
 		var cellUpdate = row.insertCell(1);
@@ -308,7 +345,8 @@ function insertAddressLine() {
 			'<form:option value="" label=" " /><form:options items="${addrCountryList}" itemValue="name" itemLabel="desc"/></form:select>' +
 			'</form:form>';
 			
-			
+		enableFields('addressTable', row);
+		
 		row.find('.addrPrimary').removeAttr("disabled");
 		
 		var currentTD = row.find('.empAdd');
@@ -319,11 +357,14 @@ function insertAddressLine() {
 		row.find('.addrTypeSelect').focus();
 		row.find('.dateType').removeAttr("disabled");
 		row.find('.dateType').attr('placeholder','dd/mm/yyyy');		
+		*/
+		
 		
 		
 	//if no records	
 	}else if(!isNotNullAddress() && $('#addressTable tr').length < 3){
-		updateAddressLine();
+		enableFields('addressTable', row);
+		//updateAddressLine();
 		disableIcons('addressTable');
 	}
 }

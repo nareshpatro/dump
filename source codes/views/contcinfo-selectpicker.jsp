@@ -60,9 +60,6 @@
 			width: 100%;
 			box-sizing: border-box;
 		}
-		.divText{
-			color: gray;
-		}
 		
     </style>
 	
@@ -113,32 +110,41 @@
 							<td>
 								<center><input type="checkbox" class="addrPrimary" disabled="true"/></center>
 							</td>
-							<td><div class="addrTypeDiv divText"></div>
-								<select class="form-control empAdd addrTypeSelect" id="addrType" data-container="body" style="display:none">
-								<option value=""> </option>
+							<td><div class="addrTypeDiv"></div>
+								<div class="addrTypeSelectDiv form-group" style="display:none">
+								<select path="addrType" class="form-control empAdd addrTypeSelect selectpicker" id="addrType" data-container="body">
+					<!--				<form:option value="" label=" " />
+									<form:options items="${addrTypeList}" itemValue="name" itemLabel="desc"/> -->
 								</select>
+								</div>
 							</td>
-							<td><div class="addrFromDiv divText"></div>
+							<td><div class="addrFromDiv"></div>
 								<input class="form-control empAddDate dateType fromDate datepicker" id="addrFrom" style="display:none"/>
 							</td>
-							<td><div class="addrToDiv divText"></div>
+							<td><div class="addrToDiv"></div>
 								<input class="form-control empAddDate dateType toDate datepicker" id="addrTo" style="display:none"/>
 							</td>
-							<td><div class="addrAddressDiv divText"></div>
+							<td><div class="addrAddressDiv"></div>
 								<input class="form-control empAdd addressText" id="addrAddress" maxlength="240" style="display:none"/>
 							</td>
-							<td><div class="addrDistrictDiv divText"></div>
+							<td><div class="addrDistrictDiv"></div>
 								<input class="form-control empAdd districtText" id="addrDistrict" maxlength="30" style="display:none"/>
 							</td>
-							<td><div class="addrAreaDiv divText"></div>
-								<select class="form-control empAdd areaSelect" data-container="body" id="addrArea" style="display:none">
-								<option value=""> </option>
+							<td><div class="addrAreaDiv"></div>
+								<div class="areaSelectDiv form-group"  style="display:none">
+								<select path="addrArea" class="form-control empAdd areaSelect selectpicker" data-container="body" id="addrArea">
+					<!--				<form:option value="" label=" " />
+									<form:options items="${addrAreaList}" itemValue="name" itemLabel="desc"/> -->
 								</select>
+								</div>
 							</td>
-							<td><div class="addrCountryDiv divText"></div>
-								<select class="form-control empAdd countrySelect " id="addrCountry" style="display:none">
-								<option value=""> </option>
+							<td><div class="addrCountryDiv"></div>
+								<div class="countrySelectDiv form-group"  style="display:none">
+								<select path="addrCountry" class="form-control empAdd countrySelect "  id="addrCountry">
+					<!--				<option value="" label=" " />
+									<options items="${addrCountryList}" itemValue="name" itemLabel="desc"/> 	-->
 								</select>
+								</div>
 							</td>
 						</tr>
 					</tbody>
